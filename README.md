@@ -3,13 +3,15 @@ xfswatch
 
 A tool that run specified command whenever changes of target files was detected
 
-*Install*
+Install
+-------
 
     git clone https://github.com/zjx20/xfswatch.git
     cd xfswatch
     python xfswatch.py --setup
 
-*Usage*
+Usage
+-----
 
     usage: xfswatch [-h] [--setup] [--path PATH [PATH ...]] [--cmd CMD]
 
@@ -20,6 +22,7 @@ A tool that run specified command whenever changes of target files was detected
                             paths for watching
       --cmd CMD             command
 
-Examples:
+Examples
+--------
 
     xfswatch --path ./dir1 ./file1 --cmd "ls -al"
