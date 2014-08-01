@@ -6,6 +6,8 @@ A tool that run specified command whenever changes of target files was detected
 Install
 -------
 
+    sudo yum install libyaml libyaml-devel  # for watchdog
+    sudo pip install watchdog
     git clone https://github.com/zjx20/xfswatch.git
     cd xfswatch
     python xfswatch.py --setup
