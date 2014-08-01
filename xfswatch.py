@@ -94,7 +94,7 @@ def setup():
     script = os.path.abspath(sys.argv[0])
     dest = '/usr/local/bin/xfswatch'
     display('Link "%s" to %s' % (script, dest))
-    cmd = 'chmod +x %s && sudo ln -s -f "%s" %s' % (script, script, dest)
+    cmd = 'chmod +x %s && ln -s -f "%s" %s' % (script, script, dest)
     os.system(cmd)
 
 def main():
