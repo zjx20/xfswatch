@@ -22,7 +22,7 @@ import watchdog.events, watchdog.observers
 class CmdHandler(watchdog.events.PatternMatchingEventHandler):
 
     def __init__(self, name, cmd):
-        watchdog.events.PatternMatchingEventHandler.__init__(self, "*/" + name)
+        watchdog.events.PatternMatchingEventHandler.__init__(self, ["*/"+name])
         self.cmd = cmd
 
     def on_created(self, event):
