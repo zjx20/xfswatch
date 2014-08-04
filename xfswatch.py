@@ -13,6 +13,9 @@ requires: pip install watchdog
     # project site: http://github.com/gorakhargosh/watchdog
     # api document: https://pythonhosted.org/watchdog/index.html
 
+TODO: support "{file}" place holder of parameter in cmd string,
+    replace with the path of the changed file
+
 """
 
 import os, datetime, time
@@ -22,51 +25,47 @@ import watchdog.events, watchdog.observers
 class CmdHandler(watchdog.events.PatternMatchingEventHandler):
 
     def __init__(self, name, cmd):
-        watchdog.events.PatternMatchingEventHandler.__init__(self, ["*/"+name])
+        pattern = ['*'] if name == '' else ['*/' + name]
+        watchdog.events.PatternMatchingEventHandler.__init__(self, pattern)
         self.cmd = cmd
 
     def on_created(self, event):
-        filename = event.src_path
-        display("File \"%s\" created." % filename)
-        display("Going to execute cmd \"%s\":" % self.cmd)
+        display('File "%s" was created.' % event.src_path)
+        display('Going to execute cmd "%s": ' % self.cmd)
         os.system(self.cmd)
-        print ""
+        print ''
 
     def on_deleted(self, event):
-        filename = event.src_path
-        display("File \"%s\" deleted." % filename)
-        display("Going to execute cmd \"%s\":" % self.cmd)
+        display('File "%s" was deleted.' % event.src_path)
+        display('Going to execute cmd "%s": ' % self.cmd)
         os.system(self.cmd)
-        print ""
+        print ''
 
     def on_modified(self, event):
-        filename = event.src_path
-        display("File \"%s\" modified." % filename)
-        display("Going to execute cmd \"%s\":" % self.cmd)
+        display('File "%s" was modified.' % event.src_path)
+        display('Going to execute cmd "%s": ' % self.cmd)
         os.system(self.cmd)
-        print ""
+        print ''
 
     def on_moved(self, event):
-        filename = event.src_path
-        display("File \"%s\" moved." % filename)
-        display("Going to execute cmd \"%s\":" % self.cmd)
+        display('File "%s" was moved.' % event.src_path)
+        display('Going to execute cmd "%s": ' % self.cmd)
         os.system(self.cmd)
-        print ""
+        print ''
 
 
 
 def display(str):
-    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print "[{0}] {1}".format(now, str)
-
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print '[{0}] {1}'.format(now, str)
 
 def parse_opt():
     parser = argparse.ArgumentParser(prog='xfswatch')
-    parser.add_argument('--setup', action='store_true',
+    parser.add_argument('--setup', action=SetupAction, nargs=0,
             help='link xfswatch.py to /usr/local/bin/xfswatch')
-    parser.add_argument('--path', action='store', nargs="+",
-            help='paths for watching')
-    parser.add_argument('--cmd', action='store',
+    parser.add_argument('path', action='store', nargs='+',
+            help='path to be monitored, dir or file')
+    parser.add_argument('--cmd', action='store', required=True,
             help='command')
     return parser.parse_args()
 
@@ -74,13 +73,15 @@ def watch(file_list, cmd):
     observer = watchdog.observers.Observer()
 
     for file_path in file_list:
+        if file_path == '.' or file_path == '..':
+            file_path = file_path + '/'
         dir_path = os.path.dirname(file_path)
         if len(dir_path) == 0:
             dir_path = '.'
         filename = os.path.basename(file_path)
         observer.schedule(CmdHandler(filename, cmd),
                 dir_path, recursive=False)
-        display('Watching for path "%s".' % os.path.join(dir_path, filename))
+        display('Monitoring path "%s".' % os.path.join(dir_path, filename))
 
     observer.start()
     try:
@@ -90,28 +91,20 @@ def watch(file_list, cmd):
         observer.stop()
     observer.join()
 
-def setup():
-    script = os.path.abspath(sys.argv[0])
-    dest = '/usr/local/bin/xfswatch'
-    display('Link "%s" to %s' % (script, dest))
-    cmd = 'chmod +x %s && ln -s -f "%s" %s' % (script, script, dest)
-    os.system(cmd)
+class SetupAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        script = os.path.abspath(sys.argv[0])
+        dest = '/usr/local/bin/xfswatch'
+        display('Link "%s" to %s' % (script, dest))
+        cmd = 'chmod +x %s && ln -s -f "%s" %s' % (script, script, dest)
+        ret = os.system(cmd)
+        if ret != 0:
+            parser.error('Failed.')
+        else:
+            parser.exit()
 
 def main():
     args = parse_opt()
-
-    if args.setup:
-        setup()
-        return
-
-    if args.cmd == None:
-        display("Error: please specify command via --cmd.")
-        return
-
-    if len(args.path) == 0:
-        display("Error: empty watch list")
-        return
-
     watch(args.path, args.cmd)
 
 
