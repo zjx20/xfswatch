@@ -118,7 +118,7 @@ def watch(file_list, cmd):
                 break
             elif ch == ' ':
                 os.system(cmd)
-    except KeyboardInterrupt:
+    finally:
         observer.stop()
     observer.join()
 
