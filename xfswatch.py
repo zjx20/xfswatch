@@ -37,12 +37,14 @@ except ImportError:
         import tty
         import termios
         fd = sys.stdin.fileno()
-        old = termios.tcgetattr(fd)
+        oldterm = termios.tcgetattr(fd)
+        newattr = termios.tcgetattr(fd)
+        newattr[3] = newattr[3] & ~termios.ICANON & ~termios.ECHO
+        termios.tcsetattr(fd, termios.TCSANOW, newattr)
         try:
-            tty.setraw(fd)
             return sys.stdin.read(1)
         finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+            termios.tcsetattr(fd, termios.TCSAFLUSH, oldterm)
 
 
 class CmdHandler(watchdog.events.PatternMatchingEventHandler):
@@ -113,11 +115,11 @@ def watch(file_list, cmd):
         print 'Press "space" to execute command manually.'
         while True:
             ch = getch()
-            if ord(ch) == 3:
-                # ctrl-c
-                break
-            elif ch == ' ':
+            if ch == ' ':
                 os.system(cmd)
+                print ''
+    except KeyboardInterrupt:
+        pass
     finally:
         observer.stop()
     observer.join()
