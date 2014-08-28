@@ -15,12 +15,35 @@ requires: pip install watchdog
 
 TODO: support "{file}" place holder of parameter in cmd string,
     replace with the path of the changed file
-
 """
 
-import os, datetime, time
-import sys, argparse, json
-import watchdog.events, watchdog.observers
+import os
+import datetime
+import time
+import sys
+import argparse
+import json
+import watchdog.events
+import watchdog.observers
+
+
+try:
+    # Win32
+    from msvcrt import getch
+except ImportError:
+    # UNIX
+    def getch():
+        import sys
+        import tty
+        import termios
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            return sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
 
 class CmdHandler(watchdog.events.PatternMatchingEventHandler):
 
@@ -48,26 +71,28 @@ class CmdHandler(watchdog.events.PatternMatchingEventHandler):
         print ''
 
     def on_moved(self, event):
-        display('File "%s" was moved.' % event.src_path)
+        display('File "%s" was moved to %s.' % (event.src_path,
+                                                event.dest_path))
         display('Going to execute cmd "%s": ' % self.cmd)
         os.system(self.cmd)
         print ''
-
 
 
 def display(str):
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     print '[{0}] {1}'.format(now, str)
 
+
 def parse_opt():
     parser = argparse.ArgumentParser(prog='xfswatch')
     parser.add_argument('--setup', action=SetupAction, nargs=0,
-            help='link xfswatch.py to /usr/local/bin/xfswatch')
+                        help='link xfswatch.py to /usr/local/bin/xfswatch')
     parser.add_argument('path', action='store', nargs='+',
-            help='path to be monitored, dir or file')
+                        help='path to be monitored, dir or file')
     parser.add_argument('--cmd', action='store', required=True,
-            help='command')
+                        help='command')
     return parser.parse_args()
+
 
 def watch(file_list, cmd):
     observer = watchdog.observers.Observer()
@@ -80,16 +105,23 @@ def watch(file_list, cmd):
             dir_path = '.'
         filename = os.path.basename(file_path)
         observer.schedule(CmdHandler(filename, cmd),
-                dir_path, recursive=False)
+                          dir_path, recursive=False)
         display('Monitoring path "%s".' % os.path.join(dir_path, filename))
 
     observer.start()
     try:
+        print 'Press "space" to execute command manually.'
         while True:
-            time.sleep(1)
+            ch = getch()
+            if ord(ch) == 3:
+                # ctrl-c
+                break
+            elif ch == ' ':
+                os.system(cmd)
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
+
 
 class SetupAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -102,6 +134,7 @@ class SetupAction(argparse.Action):
             parser.error('Failed.')
         else:
             parser.exit()
+
 
 def main():
     args = parse_opt()
